@@ -1,0 +1,131 @@
+---
+
+# ssh-agent bash
+# ssh-add ~/.ssh/id_rsa
+
+#
+#  $ TF_STATE=../terraform ansible-playbook -i ~/bin/terraform-inventory -u centos site.yml
+#
+
+- hosts: superset_eip
+  become: yes
+  become_user: root
+
+  vars:
+    required_packages:
+      - "python36u"
+      - "python36u-pip"
+      - "python36u-devel"
+      - "python-setuptools"
+      - "python34u-wheel"
+      - "cyrus-sasl-devel"
+
+      - "htop"
+      - "vim"
+      - "mlocate"
+      - "sqlite"
+
+    required_pip_packages:
+      - "ipython"
+      - "pybigquery"
+      - "pandas==0.23.4"
+      - "sqlalchemy==1.2.18"
+
+  tasks:
+
+    - name: "Upgrade all packages"
+      yum:
+        name: '*'
+        state: latest
+
+    - name: "Install yum utilities"
+      yum:
+        name: "yum-utils"
+        state: present
+
+    - name: "Install the 'Development tools' package group"
+      yum:
+        name: "@Development tools"
+        state: present
+
+    - name: "Install IUS"
+      yum:
+        name: "https://centos7.iuscommunity.org/ius-release.rpm"
+        state: present
+
+    - name: "Install required packages"
+      yum:
+        name: "{{ required_packages }}"
+
+    - name: "Update pip and setuptools"
+      pip:
+        name:
+          - "pip"
+          - "setuptools"
+        state: "latest"
+        executable: "pip3.6"
+
+    - name: "Install required pip packages"
+      pip:
+        name: "{{ required_pip_packages }}"
+        executable: "pip3.6"
+
+    - name: "Install superset"
+      pip:
+        name: "superset"
+        executable: "pip3.6"
+      register: superset_install
+
+    - name: "Create superset user"
+      user:
+        name: "superset"
+
+    - name: "Configure Superset"
+      block:
+
+          - name: "Setup FlaskAppBuilder"
+            shell: "fabmanager create-admin --app superset --username admin --firstname admin --lastname user --email admin@fab.org --password superset"
+
+          - name: "Initialize the database"
+            shell: "superset db upgrade"
+
+          - name: "Creates default roles and permissions"
+            shell: "superset init"
+
+      become: yes
+      become_user: superset
+      when: superset_install.changed
+
+    - name: "Copy Google key"
+      copy:
+        src: "key.json"
+        dest: "/home/superset/.google_cpd_key.json"
+        owner: "superset"
+        group: "superset"
+        mode: 0644
+
+    - name: "Create superset systemd service"
+      template:
+        src: "superset.service.j2"
+        dest: "/etc/systemd/system/superset.service"
+        owner: root
+        group: root
+        mode: 644
+      vars:
+        superset_user: "superset"
+        superset_port: "8088"
+        superset_workers: 1
+        superset_bin: "/bin/superset"
+        superset_service_env_vars:
+          GOOGLE_APPLICATION_CREDENTIALS: "/home/superset/.google_cpd_key.json"
+      register: superset_service
+
+    - name: "Reload systemd configuration"
+      command: "systemctl daemon-reload"
+      when: superset_service.changed
+
+    - name: "Ensure Superset is running"
+      service:
+        name: superset
+        state: restarted
+        enabled: yes
