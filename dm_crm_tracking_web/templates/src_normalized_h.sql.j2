@@ -1,0 +1,159 @@
+SELECT src.date_,
+       src.cookie,
+       src.uidcliente,
+       src.id_sesion,
+       src.usuario_ip,
+       src.usuario_login,
+       src.usuario_usa_tablet,
+       src.usuario_device,
+       src.usuario_agent,
+       src.usuario_referer,
+       src.usuario_x_forwarded_for,
+       src.usuario_url,
+       src.usuario_num_tarjeta_mas,
+       src.usuario_nivel_tarjeta_mas,
+       src.usuario_rewards_type,
+       src.usuario_country_iso_code,
+       src.usuario_zona_iso_code,
+       src.usuario_pais,
+       src.usuario_market,
+       src.usuario_redencion,
+       src.busqueda_search_hotels,
+       src.busqueda_search_city,
+       src.busqueda_search_country,
+       src.busqueda_search_title,
+       src.busqueda_description,
+       src.busqueda_keywords,
+       src.reserva_num_noches,
+       src.reserva_num_habitaciones,
+       src.reserva_num_adultos,
+       src.reserva_num_ninyos,
+       src.reserva_codigo_habitacion,
+       src.reserva_checkin,
+       src.reserva_checkout,
+       src.reserva_price_usd,
+       src.reserva_price_eur,
+       src.reserva_price_gbp,
+       src.reserva_id,
+       src.hotel_codigo,
+       src.hotel_nombre,
+       src.hotel_categoria,
+       src.hotel_marca,
+       src.hotel_ciudad,
+       src.hotel_pais,
+       src.hotel_cp,
+       src.hotel_categoria_habitacion,
+       src.hotel_tipo_habitaciones_disponibles,
+       src.web_page_section,
+       src.web_page_type,
+       src.web_seccion_interna,
+       src.web_site_language,
+       src.usuario_partner,
+       src.usuario_area_one,
+       src.usuario_area_two,
+       src.web_version_web,
+       src.utm_campaign,
+       coalesce(crm_medium.replacestring, src.utm_medium) AS utm_medium,
+       coalesce(crm_source.replacestring, src.utm_source) AS utm_source,
+       src.utm_content
+FROM
+  (SELECT t AS date_,
+          cookie AS cookie,
+          uidcliente AS uidcliente,
+          session_id AS id_sesion,
+          ip_cliente AS usuario_ip,
+          IF(usuario_logado = 'true', 1, 0) AS usuario_login,
+          IF(usuario_tablet = 'true', 1, 0) AS usuario_usa_tablet,
+          device AS usuario_device,
+          user_agent AS usuario_agent,
+          referer AS usuario_referer,
+          x_forwarded_for AS usuario_x_forwarded_for,
+          url AS usuario_url,
+          cliente_num_tarjeta_mas AS usuario_num_tarjeta_mas,
+          nivel_tarjeta_mas AS usuario_nivel_tarjeta_mas,
+          userrewardstype AS usuario_rewards_type,
+          tealium_user_country AS usuario_country_iso_code,
+          tealium_user_zona AS usuario_zona_iso_code,
+          pais_usuario_nombre AS usuario_pais,
+          usermarket AS usuario_market,
+          redencion AS usuario_redencion,
+          tealium_search_hotels AS busqueda_search_hotels,
+          tealium_search_city AS busqueda_search_city,
+          tealium_search_country AS busqueda_search_country,
+          title AS busqueda_search_title,
+          description AS busqueda_description,
+          keywords AS busqueda_keywords,
+          IF(reserva_numnoches = ''
+             OR reserva_numnoches IS NULL, 0, reserva_numnoches) AS reserva_num_noches,
+          IF(tealium_habitaciones = ''
+             OR tealium_habitaciones IS NULL, 0, tealium_habitaciones) AS reserva_num_habitaciones,
+          IF(tealium_numeroadultos = ''
+             OR tealium_numeroadultos IS NULL, 0, tealium_numeroadultos) AS reserva_num_adultos,
+          IF(tealium_numeroninos = ''
+             OR tealium_numeroninos IS NULL, 0, tealium_numeroninos) AS reserva_num_ninyos,
+          reserva_codigo_habitacion AS reserva_codigo_habitacion,
+          date_checkin_ts AS reserva_checkin,
+          date_checkout_ts AS reserva_checkout,
+          IF(total_price_usd = ''
+             OR total_price_usd IS NULL, 0, total_price_usd) AS reserva_price_usd,
+          IF(total_price_eur = ''
+             OR total_price_eur IS NULL, 0, total_price_eur) AS reserva_price_eur,
+          IF(total_price_gbp = ''
+             OR total_price_gbp IS NULL, 0, total_price_gbp) AS reserva_price_gbp,
+          conversionid AS reserva_id,
+          tealium_codigohotel AS hotel_codigo,
+          CASE
+              WHEN product_name_ficha IS NOT NULL
+                   AND product_name_ficha != '' THEN product_name_ficha
+              ELSE nombre_hotel_normalizado
+          END AS hotel_nombre,
+          CASE
+              WHEN tealium_hotel_categoria IS NOT NULL
+                   AND tealium_hotel_categoria != '' THEN tealium_hotel_categoria
+              WHEN hotel_category IS NOT NULL
+                   AND hotel_category != '' THEN CASE
+                                                     WHEN (LENGTH(hotel_category) - LENGTH(regexp_replace(hotel_category, '\\\\*', ''))) = 5
+                                                          AND hotel_category LIKE '%gran_lujo%' THEN 'Cinco_estrellas_gran_lujo'
+                                                     WHEN (LENGTH(hotel_category) - LENGTH(REGEXP_REPLACE(hotel_category, '\\\\*', ''))) = 5 THEN 'Cinco_estrellas'
+                                                     WHEN (LENGTH(hotel_category) - LENGTH(REGEXP_REPLACE(hotel_category, '\\\\*', ''))) = 4 THEN 'Cuatro_estrellas'
+                                                     WHEN (LENGTH(hotel_category) - LENGTH(REGEXP_REPLACE(hotel_category, '\\\\*', ''))) = 3 THEN 'Tres_estrellas'
+                                                     WHEN (LENGTH(hotel_category) - LENGTH(REGEXP_REPLACE(hotel_category, '\\\\*', ''))) = 2 THEN 'Dos_estrellas'
+                                                     WHEN (LENGTH(hotel_category) - LENGTH(REGEXP_REPLACE(hotel_category, '\\\\*', ''))) = 1 THEN 'Una_estrella'
+                                                 END
+              ELSE ''
+          END AS hotel_categoria,
+          tealium_hotel_marca AS hotel_marca,
+          CASE
+              WHEN hotel_ciudad_ingles IS NOT NULL
+                   AND hotel_ciudad_ingles != '' THEN hotel_ciudad_ingles
+              ELSE tealium_hotel_city
+          END AS hotel_ciudad,
+          CASE
+              WHEN hotel_pais_ingles IS NOT NULL
+                   AND hotel_pais_ingles != '' THEN hotel_pais_ingles
+              ELSE hotel_countryname
+          END AS hotel_pais,
+          hotel_cp AS hotel_cp,
+          categoria_habitacion AS hotel_categoria_habitacion,
+          tipos_habitaciones_disponibles AS hotel_tipo_habitaciones_disponibles,
+          page_section AS web_page_section,
+          page_type AS web_page_type,
+          seccion_interna AS web_seccion_interna,
+          site_language AS web_site_language,
+          partner AS usuario_partner,
+          area_one AS usuario_area_one,
+          area_two AS usuario_area_two,
+          version_web AS web_version_web,
+          utm_campaign,
+          utm_medium,
+          utm_source,
+          utm_content
+   FROM tmp_src_raw_h ) AS src
+LEFT JOIN
+  (SELECT *
+   FROM analytics.crm_srfilters
+   WHERE field = 'CAMPAIGN_MEDIUM' ) AS crm_medium ON crm_medium.searchstring = src.utm_medium
+LEFT JOIN
+  (SELECT *
+   FROM analytics.crm_srfilters
+   WHERE field = 'CAMPAIGN_SOURCE' ) AS crm_source ON crm_source.searchstring = src.utm_source

@@ -1,0 +1,32 @@
+SELECT
+  `date`,
+  hour,
+  {% if with_hotel %}hotel_id,{% endif %}
+  COUNT(sesion_id) AS sesions,
+  SUM(search_hotel) AS search_hotel,
+  SUM(order_hotel) AS order_hotel,
+  SUM(revenue) AS revenue,
+  device,
+  country,
+  known_user,
+  utm_medium,
+  utm_campaign,
+  utm_source,
+  checkin,
+  checkout
+FROM (
+  temp_table_sessions
+)
+GROUP BY
+  `date`,
+  hour,
+  {% if with_hotel %}hotel_id,{% endif %}
+  device,
+  country,
+  known_user,
+  revenue,
+  utm_medium,
+  utm_campaign,
+  utm_source,
+  checkin,
+  checkout

@@ -1,0 +1,39 @@
+SELECT
+  MAX(`date`) AS `date`,
+  MAX(hour) AS hour,
+  {% if with_hotel %}hotel_id,{% endif %}
+  sesion_id,
+  MAX(search_hotel) AS search_hotel,
+  MAX(order_hotel) AS order_hotel,
+  MAX(device) AS device,
+  MAX(country) AS country,
+  MAX(known_user) AS known_user,
+  MAX(revenue) AS revenue,
+  MAX(utm_medium) AS utm_medium,
+  MAX(utm_campaign) AS utm_campaign,
+  MAX(utm_source) AS utm_source,
+  CASE
+    WHEN MAX(checkin) > 90 THEN "+90"
+    WHEN MAX(checkin) > 60 THEN "90"
+    WHEN MAX(checkin) > 30 THEN "60"
+    WHEN MAX(checkin) > 21 THEN "30"
+    WHEN MAX(checkin) > 14 THEN "21"
+    WHEN MAX(checkin) > 7 THEN "14"
+    WHEN MAX(checkin) > 0 THEN "7"
+    ELSE "0"
+  END AS checkin,
+  CASE
+    WHEN MAX(checkout) > 90 THEN "+90"
+    WHEN MAX(checkout) > 60 THEN "90"
+    WHEN MAX(checkout) > 30 THEN "60"
+    WHEN MAX(checkout) > 21 THEN "30"
+    WHEN MAX(checkout) > 14 THEN "21"
+    WHEN MAX(checkout) > 7 THEN "14"
+    WHEN MAX(checkout) > 0 THEN "7"
+    ELSE "0"
+  END AS checkout
+FROM (
+  temp_table_base
+) AS data
+GROUP BY
+  {% if with_hotel %}hotel_id,{% endif %} sesion_id

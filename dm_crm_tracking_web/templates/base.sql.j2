@@ -1,0 +1,38 @@
+SELECT
+  substring(from_unixtime(unix_timestamp(date_, 'yyyy-MM-dd')), 1, 10) AS `date`,
+  concat(hour(date_), ':', minute(date_)) AS hour,
+  hotel_codigo AS hotel_id,
+  id_sesion AS sesion_id,
+  IF(web_page_type == "reserva | funnel-tarifas", 1, 0) AS search_hotel,
+  IF(web_page_type == "reserva | funnel-confirmacion", 1, 0) AS order_hotel,
+  usuario_device AS device,
+  usuario_pais AS country,
+  IF(uidcliente !="", 1, 0) AS known_user,
+  IF(web_page_type == "reserva | funnel-confirmacion",
+    reserva_price_eur,
+    0
+  ) AS revenue,
+  IF(parse_url(usuario_url, 'QUERY', 'esl-k') != "",
+    "sem",
+    utm_medium
+  ) as utm_medium,
+  utm_campaign,
+  IF(parse_url(usuario_url, 'QUERY', 'esl-k') != "",
+    substring(parse_url(usuario_url, 'QUERY', 'esl-k'), 1, 10),
+    utm_source
+  ) as utm_source,
+  IF(web_page_type == "reserva | funnel-tarifas",
+    datediff(to_date(reserva_checkin), to_date(date_)),
+    0
+  ) as checkin,
+  IF(web_page_type == "reserva | funnel-tarifas",
+    datediff(to_date(reserva_checkout), to_date(date_)),
+    0
+  ) as checkout {{ fecha }}
+FROM
+  temp_table_src_normalized_h
+WHERE
+  id_sesion != ""
+  {% if with_hotel %}
+  AND hotel_codigo IS NOT NULL
+  {% endif %}
