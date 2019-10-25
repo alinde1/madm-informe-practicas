@@ -7,12 +7,29 @@ This module provides a Eulerian object to make requests to a subset
 of the Eulerian api.
 """
 
+import json
+from urllib.parse import urlencode
+import logging
+
 import requests
 
-from urllib.parse import urlencode
+
+def check_for_errors(func):
+    """Decorator to check API response"""
+    def wrapper(*args, **kwargs):
+        response = func(*args, **kwargs)
+        if response.status_code == 200:
+            response_text = json.loads(response.text)
+            if response_text['error']:
+                logging.error(response_text['error_msg'])
+        else:
+            logging.error('%s - %s', response.url, response.reason)
+        return response
+
+    return wrapper
 
 
-class Eulerian(object):
+class Eulerian:
     """A Eulerian API wrapper."""
 
     def __init__(self, auth_token, customer, site, datacenter='com'):
@@ -23,16 +40,19 @@ class Eulerian(object):
         self.domain_api = f'{customer}.api.eulerian.{datacenter}/ea/v2'
         self.url_api = f'https://{self.domain_api}/{self.auth_token}/ea/{self.site}/report/order'
 
-    def replay(self, order_ref, real_amount, ereplay_time):
+    @check_for_errors
+    def replay(self, order_ref, real_amount, ereplay_time, **kwargs):
         """Ingest"""
         url = f'{self.url_api}/replay.json'
         params = {'ref': order_ref,
                   'amount': real_amount,
-                  'ereplay-time': ereplay_time}
+                  'ereplay-time': ereplay_time,
+                  **kwargs
+                  }
         response = requests.get(url, params=urlencode(params))
-        print(response.status_code)
         return response
 
+    @check_for_errors
     def valid(self, order_ref, order_newamount=None, ea_apiasync=None):
         """Modify"""
         url = f'{self.url_api}/valid.json'
@@ -42,13 +62,12 @@ class Eulerian(object):
         if ea_apiasync:
             params['ea-apiasync'] = ea_apiasync
         response = requests.get(url, params=urlencode(params))
-        print(response.status_code)
         return response
 
+    @check_for_errors
     def cancel(self, order_ref):
         """Cancel"""
         url = f'{self.url_api}/cancel.json'
         params = {'order-ref': order_ref}
         response = requests.get(url, params=urlencode(params))
-        print(response.status_code)
         return response
