@@ -8,7 +8,7 @@ provider "aws" {
 resource "aws_instance" "superset" {
   ami = "ami-0957ba512eafd08d9"
   instance_type = "t2.small"
-  subnet_id = "subnet-6b0c0926" #"subnet-beaf18c3"
+  subnet_id = "subnet-6b0c0926"
   security_groups = ["${aws_security_group.superset.id}"]
   key_name = "terraform"
   tags = {
@@ -55,28 +55,3 @@ resource "aws_security_group" "superset" {
     Name = "pruebas_terraform"
   }
 }
-
-#S3 bucket
-//resource "aws_s3_bucket" "terraform_state" {
-//  bucket = "terraform-state-marti-puig"
-//  versioning {
-//    enabled = true
-//  }
-//  lifecycle {
-//    prevent_destroy = true
-//  }
-//  tags {
-//    Name = "S3 Remote Terraform State Store"
-//  }
-//}
-
-//terraform {
-//  backend "s3" {
-//    encrypt = true
-//    bucket = "terraform-state-marti-puig"
-//    key    = "Terraform/terraform.state"
-//    region = "eu-central-1"
-//  }
-//}
-
-# ssh -i ../../../terraform.pem centos@35.158.80.69
